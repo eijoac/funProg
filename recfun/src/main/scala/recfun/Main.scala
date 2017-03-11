@@ -26,10 +26,7 @@ object Main {
     def counter(chars: List[Char], count : Int): Boolean = { // 2-open
 
     	// handle the empty char case
-      if (chars.isEmpty) {
-        if (count == 0) true
-        else false
-      }
+      if (chars.isEmpty) count == 0
       else { // 3-open
         
         // handle the cases that the first char is not '(' or ')'
@@ -55,5 +52,18 @@ object Main {
   /**
    * Exercise 3
    */
-  def countChange(money: Int, coins: List[Int]): Int = ???
+  def countChange(money: Int, coins: List[Int]): Int = {
+
+    if (money == 0) 1
+    else if (money <0 | coins.isEmpty) 0
+    else countChange(money - coins.head, coins) + countChange(money, coins.tail)
+
+    // def countChangeHelper(money: Int, coins: List[Int], acc: Int): Int = 
+    //   if (money == 0) acc + 1
+    //   else if (money <0 | coins.isEmpty) acc
+    //   else countChangeHelper(money - coins.head, coins, countChangeHelper(money, coins.tail, acc))
+
+    // countChangeHelper(money, coins, 0)
+  }
+
 }
