@@ -122,14 +122,47 @@ object Huffman {
    * If `trees` is a list of less than two elements, that list should be returned
    * unchanged.
    */
+
+  /*
   def combine(trees: List[CodeTree]): List[CodeTree] = 
-    if (singleton(trees)) trees
+    if (singleton(trees) || trees.isEmpty) trees
     else trees match {
       case (x: Leaf) :: (y: Leaf) :: (xs: List[CodeTree]) => Fork(x, y, List(x.char, y.char), x.weight + y.weight) :: xs
       case (x: Fork) :: (y: Fork) :: (xs: List[CodeTree]) => Fork(x, y, (x.chars ::: y.chars), x.weight + y.weight) :: xs
       case (x: Leaf) :: (y: Fork) :: (xs: List[CodeTree]) => Fork(x, y, x.char :: y.chars, x.weight + y.weight) :: xs
       case (x: Fork) :: (y: Leaf) :: (xs: List[CodeTree]) => Fork(x, y, x.chars ::: List(y.char), x.weight + y.weight) :: xs
     }
+  */
+  
+  def combine(trees: List[CodeTree]): List[CodeTree] = 
+    if (singleton(trees) || trees.isEmpty) trees
+    else trees match {
+      case (x: Leaf) :: (y: Leaf) :: (xs: List[CodeTree]) => 
+        insertOrderCodeTree(Fork(x, y, List(x.char, y.char), x.weight + y.weight), xs)
+      case (x: Fork) :: (y: Fork) :: (xs: List[CodeTree]) => 
+        insertOrderCodeTree(Fork(x, y, (x.chars ::: y.chars), x.weight + y.weight), xs)
+      case (x: Leaf) :: (y: Fork) :: (xs: List[CodeTree]) =>
+        insertOrderCodeTree(Fork(x, y, x.char :: y.chars, x.weight + y.weight), xs)
+      case (x: Fork) :: (y: Leaf) :: (xs: List[CodeTree]) =>
+        insertOrderCodeTree(Fork(x, y, x.chars ::: List(y.char), x.weight + y.weight), xs)
+    }
+
+  def insertOrderCodeTree(fork: Fork, trees: List[CodeTree]) : List[CodeTree] = trees match {
+    case List() => List(fork)
+    case (y: Leaf) :: ys => if (fork.weight <= y.weight) fork :: trees else y :: insertOrderCodeTree(fork, ys)
+    case (y: Fork) :: ys => if (fork.weight <= y.weight) fork :: trees else y :: insertOrderCodeTree(fork, ys)
+  }
+
+  /*
+  def combine(trees: List[CodeTree]): List[CodeTree] = trees match {
+    case (x: Leaf) :: Nil => x :: Nil
+    case (x: Fork) :: Nil => x :: Nil
+    case (x: Leaf) :: (y: Leaf) :: (xs: List[CodeTree]) => Fork(x, y, List(x.char, y.char), x.weight + y.weight) :: xs
+    case (x: Fork) :: (y: Fork) :: (xs: List[CodeTree]) => Fork(x, y, (x.chars ::: y.chars), x.weight + y.weight) :: xs
+    case (x: Leaf) :: (y: Fork) :: (xs: List[CodeTree]) => Fork(x, y, x.char :: y.chars, x.weight + y.weight) :: xs
+    case (x: Fork) :: (y: Leaf) :: (xs: List[CodeTree]) => Fork(x, y, x.chars ::: List(y.char), x.weight + y.weight) :: xs
+  }
+  */
   
   /**
    * This function will be called in the following way:
@@ -220,7 +253,9 @@ object Huffman {
       case (x: Leaf) => 
         if (x.char == char) code
         else List[Bit]()
-      case (x: Fork) => encoderHelper(x.left, char, code ::: List(0)) ::: encoderHelper(x.right, char, code ::: List(1))
+      case (x: Fork) => 
+        if (!x.chars.contains(char)) List[Bit]()
+        else encoderHelper(x.left, char, code ::: List(0)) ::: encoderHelper(x.right, char, code ::: List(1))
     }
 
 
@@ -244,14 +279,20 @@ object Huffman {
    * a valid code tree that can be represented as a code table. Using the code tables of the
    * sub-trees, think of how to build the code table for the entire tree.
    */
-  def convert(tree: CodeTree): CodeTable = ???
+  def convert(tree: CodeTree): CodeTable = 
+    convertHelper(tree, List[Bit](), List[(Char, List[Bit])]())
+
+  def convertHelper(tree: CodeTree, charCode: List[Bit], table: CodeTable): CodeTable = tree match {
+    case (x: Leaf) => (x.char, charCode) :: table
+    case (x: Fork) => convertHelper(x.left, charCode ::: List(0), table) ::: convertHelper(x.right, charCode ::: List(1), table) 
+  }
   
   /**
    * This function takes two code tables and merges them into one. Depending on how you
    * use it in the `convert` method above, this merge method might also do some transformations
    * on the two parameter code tables.
    */
-  def mergeCodeTables(a: CodeTable, b: CodeTable): CodeTable = ???
+  def mergeCodeTables(a: CodeTable, b: CodeTable): CodeTable = a ::: b
   
   /**
    * This function encodes `text` according to the code tree `tree`.
@@ -259,5 +300,20 @@ object Huffman {
    * To speed up the encoding process, it first converts the code tree to a code table
    * and then uses it to perform the actual encoding.
    */
-  def quickEncode(tree: CodeTree)(text: List[Char]): List[Bit] = ???
+  def quickEncode(tree: CodeTree)(text: List[Char]): List[Bit] = {
+    val codeTable: CodeTable = convert(tree)
+    codeBits(codeTable)(text.head) ::: quickEncodeHelper(codeTable, text.tail)
   }
+
+  def quickEncodeHelper(codeTable: CodeTable, text: List[Char]): List[Bit] =
+    if (text.isEmpty) List[Bit]()
+    else codeBits(codeTable)(text.head) ::: quickEncodeHelper(codeTable, text.tail)
+    
+  /** work on later
+  def quickEncode(tree: CodeTree)(text: List[Char]): List[Bit] = {
+    val codeTable: CodeTable = convert(tree)
+    // text.foreach yield forcodeBits(codeTable)()
+    // for (t <- text) yield codeBits(codeTable)(t)
+  }
+  */
+}
